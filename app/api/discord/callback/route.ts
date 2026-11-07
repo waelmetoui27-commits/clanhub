@@ -149,12 +149,27 @@ export async function GET(request: Request) {
       .eq("auth_user_id", user.id)
       .maybeSingle();
 
-    if (
-      profileError ||
-      !profile ||
-      profile.discord_user_id !== discordUser.id
-    ) {
-      return redirectWithError(request, "discord-account-mismatch");
+    // Separate database errors from missing profiles.
+    if (profileError) {
+      return redirectWithError(
+        request,
+        "discord-profile-check-failed"
+      );
+    }
+
+    if (!profile) {
+      return redirectWithError(
+        request,
+        "discord-profile-not-found"
+      );
+    }
+
+    // Compare the authenticated Discord account IDs.
+    if (profile.discord_user_id !== discordUser.id) {
+      return redirectWithError(
+        request,
+        "discord-user-id-mismatch"
+      );
     }
 
     const guildsResponse = await fetch(
@@ -168,12 +183,15 @@ export async function GET(request: Request) {
     );
 
     if (!guildsResponse.ok) {
-      return redirectWithError(request, "discord-servers-fetch-failed");
+      return redirectWithError(
+        request,
+        "discord-servers-fetch-failed"
+      );
     }
 
-    const guildsData: DiscordGuild[] = await guildsResponse.json();
+    const guildsData: DiscordGuild[] =
+      await guildsResponse.json();
 
-    // Keep only servers the user owns or can manage.
     const manageableGuilds = guildsData
       .filter((guild) => {
         const permissions = Number(guild.permissions);
@@ -200,7 +218,10 @@ export async function GET(request: Request) {
       }));
 
     if (manageableGuilds.length === 0) {
-      return redirectWithError(request, "no-manageable-servers");
+      return redirectWithError(
+        request,
+        "no-manageable-servers"
+      );
     }
 
     const { data: session, error: insertError } = await admin
@@ -208,16 +229,20 @@ export async function GET(request: Request) {
       .insert({
         auth_user_id: user.id,
         guilds: manageableGuilds,
-        expires_at: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+        expires_at: new Date(
+          Date.now() + 10 * 60 * 1000
+        ).toISOString(),
       })
       .select("id")
       .single();
 
     if (insertError || !session) {
-      return redirectWithError(request, "session-save-failed");
+      return redirectWithError(
+        request,
+        "session-save-failed"
+      );
     }
 
-    // Redirect to the new Discord server-selection page.
     const response = NextResponse.redirect(
       new URL("/communities/connect", request.url)
     );
