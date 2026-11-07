@@ -33,11 +33,14 @@ export default function ConnectCommunityPage() {
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.error || "Unable to load your Discord servers.");
+          throw new Error(
+            data.error || "Unable to load your Discord servers."
+          );
         }
 
         if (!cancelled) {
           setGuilds(data.guilds || []);
+          setError(null);
         }
       } catch (err) {
         if (!cancelled) {
@@ -84,7 +87,9 @@ export default function ConnectCommunityPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Unable to connect this community.");
+        throw new Error(
+          data.error || "Unable to connect this community."
+        );
       }
 
       router.push("/profile?community=connected");
@@ -135,7 +140,9 @@ export default function ConnectCommunityPage() {
         <section className="mt-12 rounded-3xl border border-white/10 bg-white/[0.03] p-5 sm:p-8">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-lg font-semibold">Your Discord servers</h2>
+              <h2 className="text-lg font-semibold">
+                Your Discord servers
+              </h2>
               <p className="mt-1 text-sm text-gray-500">
                 Select one server to continue.
               </p>
@@ -153,16 +160,38 @@ export default function ConnectCommunityPage() {
                 Loading your Discord servers...
               </p>
             </div>
-          ) : guilds.length === 0 && !error ? (
+          ) : error ? (
+            <div className="py-10 text-center">
+              <div className="text-4xl">🔄</div>
+
+              <h3 className="mt-4 text-lg font-semibold">
+                Discord connection required
+              </h3>
+
+              <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-400">
+                {error}
+              </p>
+
+              <a
+                href="/api/discord/connect"
+                className="mt-6 inline-flex rounded-xl bg-violet-600 px-6 py-3 text-sm font-semibold transition hover:bg-violet-500"
+              >
+                Connect Discord again
+              </a>
+            </div>
+          ) : guilds.length === 0 ? (
             <div className="py-14 text-center">
               <div className="text-4xl">🏠</div>
+
               <h3 className="mt-4 text-lg font-semibold">
                 No manageable servers found
               </h3>
+
               <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-400">
                 Make sure you own a Discord server or have Manage Server
                 permission, then try connecting Discord again.
               </p>
+
               <a
                 href="/api/discord/connect"
                 className="mt-6 inline-flex rounded-xl bg-violet-600 px-5 py-3 text-sm font-semibold transition hover:bg-violet-500"
@@ -203,9 +232,13 @@ export default function ConnectCommunityPage() {
                     )}
 
                     <div className="min-w-0 flex-1">
-                      <p className="truncate font-semibold">{guild.name}</p>
+                      <p className="truncate font-semibold">
+                        {guild.name}
+                      </p>
                       <p className="mt-1 text-xs text-gray-500">
-                        {guild.owner ? "Server owner" : "Server manager"}
+                        {guild.owner
+                          ? "Server owner"
+                          : "Server manager"}
                       </p>
                     </div>
 
@@ -224,20 +257,16 @@ export default function ConnectCommunityPage() {
             </div>
           )}
 
-          {error && (
-            <div className="mt-5 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-              {error}
-            </div>
-          )}
-
-          {!loading && guilds.length > 0 && (
+          {!loading && !error && guilds.length > 0 && (
             <button
               type="button"
               onClick={handleConnect}
               disabled={!selectedGuild || connecting}
               className="mt-7 w-full rounded-xl bg-violet-600 px-6 py-4 font-semibold transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {connecting ? "Connecting community..." : "Connect selected server"}
+              {connecting
+                ? "Connecting community..."
+                : "Connect selected server"}
             </button>
           )}
         </section>
