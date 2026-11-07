@@ -5,88 +5,14 @@ import { useEffect, useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase-browser";
 
-const communities = [
-  {
-    id: 1,
-    name: "Valorant Legends",
-    description: "Competitive players. Serious matches. Great community.",
-    category: "Gaming",
-    members: "12.4K",
-    online: "842",
-    initials: "VL",
-    color: "from-red-500 to-orange-500",
-    tag: "VALORANT",
-    featured: true,
-  },
-  {
-    id: 2,
-    name: "Utopia Network",
-    description: "A place to connect, discuss, play and grow together.",
-    category: "Social",
-    members: "8.2K",
-    online: "326",
-    initials: "UN",
-    color: "from-violet-500 to-indigo-500",
-    tag: "COMMUNITY",
-    featured: true,
-  },
-  {
-    id: 3,
-    name: "Minecraft Society",
-    description: "Build amazing worlds and share your creativity.",
-    category: "Gaming",
-    members: "6.8K",
-    online: "219",
-    initials: "MS",
-    color: "from-emerald-500 to-green-600",
-    tag: "MINECRAFT",
-    featured: false,
-  },
-  {
-    id: 4,
-    name: "Esports Central",
-    description: "Competitive gaming, tournaments and team discussions.",
-    category: "Esports",
-    members: "5.1K",
-    online: "184",
-    initials: "EC",
-    color: "from-blue-500 to-cyan-500",
-    tag: "ESPORTS",
-    featured: false,
-  },
-  {
-    id: 5,
-    name: "Creative Minds",
-    description: "Designers, artists and creators inspiring each other.",
-    category: "Creative",
-    members: "3.7K",
-    online: "96",
-    initials: "CM",
-    color: "from-pink-500 to-rose-500",
-    tag: "CREATIVE",
-    featured: false,
-  },
-  {
-    id: 6,
-    name: "The Gaming Lounge",
-    description: "Relax, meet new people and discover new games.",
-    category: "Social",
-    members: "2.9K",
-    online: "147",
-    initials: "GL",
-    color: "from-amber-500 to-yellow-600",
-    tag: "GAMING",
-    featured: false,
-  },
-];
-
-const categories = [
-  { name: "All", label: "All communities", icon: "✦" },
-  { name: "Gaming", label: "Gaming", icon: "◈" },
-  { name: "Esports", label: "Esports", icon: "♜" },
-  { name: "Creative", label: "Creative", icon: "✳" },
-  { name: "Social", label: "Social", icon: "◎" },
-];
+type Community = {
+  id: string;
+  discord_guild_id: string;
+  name: string;
+  icon_hash: string | null;
+  description: string | null;
+  created_at: string;
+};
 
 function ArrowIcon() {
   return (
@@ -141,19 +67,36 @@ function DiscordIcon() {
 function CommunityCard({
   community,
 }: {
-  community: (typeof communities)[number];
+  community: Community;
 }) {
+  const initials = community.name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((word) => word[0] || "")
+    .join("")
+    .toUpperCase();
+
+  const iconUrl = community.icon_hash
+    ? `https://cdn.discordapp.com/icons/${community.discord_guild_id}/${community.icon_hash}.png?size=128`
+    : null;
+
   return (
     <article className="group rounded-2xl border border-white/[0.07] bg-[#191920] p-5 transition duration-300 hover:-translate-y-1 hover:border-violet-500/40 hover:bg-[#1d1d26]">
       <div className="flex items-start justify-between">
-        <div
-          className={`flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${community.color} text-sm font-bold text-white shadow-lg`}
-        >
-          {community.initials}
-        </div>
+        {iconUrl ? (
+          <img
+            src={iconUrl}
+            alt={`${community.name} icon`}
+            className="h-12 w-12 rounded-xl object-cover"
+          />
+        ) : (
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 text-sm font-bold text-white shadow-lg">
+            {initials || "C"}
+          </div>
+        )}
 
         <span className="rounded-md border border-white/[0.08] bg-white/[0.03] px-2.5 py-1 text-[10px] font-semibold tracking-wider text-gray-400">
-          {community.tag}
+          PUBLIC COMMUNITY
         </span>
       </div>
 
@@ -162,45 +105,42 @@ function CommunityCard({
       </h3>
 
       <p className="mt-2 min-h-[42px] text-sm leading-6 text-gray-500">
-        {community.description}
+        {community.description ||
+          "A public Discord community on ClanHub."}
       </p>
 
       <div className="mt-5 flex items-center justify-between border-t border-white/[0.07] pt-4">
         <div>
           <p className="text-sm font-semibold text-gray-200">
-            {community.members}
+            ClanHub
           </p>
-          <p className="mt-1 text-xs text-gray-500">Members</p>
+          <p className="mt-1 text-xs text-gray-500">
+            Community platform
+          </p>
         </div>
 
-        <div className="text-right">
-          <p className="flex items-center justify-end gap-1.5 text-sm font-semibold text-gray-200">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-            {community.online}
-          </p>
-          <p className="mt-1 text-xs text-gray-500">Online</p>
-        </div>
+        <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-400">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+          Active
+        </span>
       </div>
-
-      <a
-        href="#get-started"
-        className="mt-5 flex items-center justify-between rounded-xl border border-white/[0.08] px-4 py-3 text-sm font-medium text-gray-300 transition hover:border-violet-500/40 hover:bg-violet-500/10 hover:text-violet-300"
-      >
-        View community
-        <ArrowIcon />
-      </a>
     </article>
   );
 }
 
 export default function Home() {
-  const [activeCategory, setActiveCategory] = useState("All");
   const [search, setSearch] = useState("");
   const [mobileMenu, setMobileMenu] = useState(false);
 
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+
+  const [communities, setCommunities] = useState<Community[]>([]);
+  const [communitiesLoading, setCommunitiesLoading] = useState(true);
+  const [communitiesError, setCommunitiesError] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
     const supabase = createClient();
@@ -219,6 +159,51 @@ export default function Home() {
 
     return () => {
       subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    async function loadCommunities() {
+      setCommunitiesLoading(true);
+      setCommunitiesError(null);
+
+      try {
+        const response = await fetch("/api/communities", {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error("Unable to load communities.");
+        }
+
+        const data: { communities?: Community[] } =
+          await response.json();
+
+        setCommunities(
+          Array.isArray(data.communities) ? data.communities : []
+        );
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") {
+          return;
+        }
+
+        setCommunitiesError(
+          "We couldn't load communities right now. Please try again."
+        );
+      } finally {
+        if (!controller.signal.aborted) {
+          setCommunitiesLoading(false);
+        }
+      }
+    }
+
+    loadCommunities();
+
+    return () => {
+      controller.abort();
     };
   }, []);
 
@@ -269,18 +254,23 @@ export default function Home() {
     "Member";
 
   const filteredCommunities = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
+    if (!query) {
+      return communities;
+    }
+
     return communities.filter((community) => {
-      const matchesCategory =
-        activeCategory === "All" ||
-        community.category === activeCategory;
+      const name = community.name.toLowerCase();
+      const description = (
+        community.description || ""
+      ).toLowerCase();
 
-      const matchesSearch =
-        community.name.toLowerCase().includes(search.toLowerCase()) ||
-        community.description.toLowerCase().includes(search.toLowerCase());
-
-      return matchesCategory && matchesSearch;
+      return name.includes(query) || description.includes(query);
     });
-  }, [activeCategory, search]);
+  }, [communities, search]);
+
+  const featuredCommunity = communities[0] ?? null;
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#111116] text-white">
@@ -450,10 +440,7 @@ export default function Home() {
       </header>
 
       {authError && (
-        <div
-          role="alert"
-          className="mx-auto mt-4 max-w-7xl px-6"
-        >
+        <div role="alert" className="mx-auto mt-4 max-w-7xl px-6">
           <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
             {authError}
             <button
@@ -519,18 +506,21 @@ export default function Home() {
 
             <div className="mt-12 flex items-center gap-4">
               <div className="flex -space-x-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#111116] bg-violet-600 text-xs font-bold">
-                  A
-                </div>
-                <div className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#111116] bg-blue-600 text-xs font-bold">
-                  M
-                </div>
-                <div className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#111116] bg-pink-600 text-xs font-bold">
-                  J
-                </div>
-                <div className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#111116] bg-emerald-600 text-xs font-bold">
-                  S
-                </div>
+                {["A", "M", "J", "S"].map((letter, index) => (
+                  <div
+                    key={letter}
+                    className={`flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#111116] text-xs font-bold ${
+                      [
+                        "bg-violet-600",
+                        "bg-blue-600",
+                        "bg-pink-600",
+                        "bg-emerald-600",
+                      ][index]
+                    }`}
+                  >
+                    {letter}
+                  </div>
+                ))}
               </div>
 
               <div>
@@ -560,44 +550,55 @@ export default function Home() {
                 </div>
 
                 <span className="rounded-lg bg-violet-500/10 px-3 py-2 text-xs text-violet-300">
-                  Preview
+                  Platform preview
                 </span>
               </div>
 
               <div className="mt-5 rounded-2xl bg-gradient-to-br from-[#35235a] to-[#1d1b2b] p-5">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-500 text-lg font-bold">
-                    U
-                  </div>
-                  <div>
-                    <p className="font-semibold">Utopia Network</p>
+                  {featuredCommunity?.icon_hash ? (
+                    <img
+                      src={`https://cdn.discordapp.com/icons/${featuredCommunity.discord_guild_id}/${featuredCommunity.icon_hash}.png?size=128`}
+                      alt={`${featuredCommunity.name} icon`}
+                      className="h-12 w-12 rounded-xl object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-violet-500 text-lg font-bold">
+                      {featuredCommunity
+                        ? featuredCommunity.name.slice(0, 1).toUpperCase()
+                        : "C"}
+                    </div>
+                  )}
+
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold">
+                      {featuredCommunity?.name || "Your next community"}
+                    </p>
                     <p className="text-xs text-violet-200/70">
-                      Gaming & Community
+                      {featuredCommunity
+                        ? "Public ClanHub community"
+                        : "Discover and connect"}
                     </p>
                   </div>
                 </div>
 
-                <div className="mt-7 grid grid-cols-2 gap-3">
-                  <div className="rounded-xl bg-black/20 p-3">
-                    <p className="text-xl font-bold">8.2K</p>
-                    <p className="mt-1 text-xs text-violet-200/70">
-                      Members
-                    </p>
-                  </div>
-
-                  <div className="rounded-xl bg-black/20 p-3">
-                    <p className="text-xl font-bold">326</p>
-                    <p className="mt-1 text-xs text-violet-200/70">
-                      Online
-                    </p>
-                  </div>
+                <div className="mt-7 rounded-xl bg-black/20 p-4">
+                  <p className="text-sm font-semibold">
+                    {featuredCommunity
+                      ? "Discover this community"
+                      : "Build your own space"}
+                  </p>
+                  <p className="mt-2 text-xs leading-6 text-violet-200/70">
+                    {featuredCommunity?.description ||
+                      "Connect your Discord server, bring your members together and start building your community on ClanHub."}
+                  </p>
                 </div>
               </div>
 
               <div className="mt-5">
                 <div className="mb-4 flex items-center justify-between">
                   <p className="text-sm font-semibold">
-                    Community activity
+                    Community features
                   </p>
                   <span className="text-xs text-gray-500">Preview</span>
                 </div>
@@ -668,8 +669,7 @@ export default function Home() {
               Find your community.
             </h2>
             <p className="mt-3 max-w-lg text-sm leading-7 text-gray-500">
-              Explore spaces built around your interests, passions and
-              favorite games.
+              Explore public Discord communities that are part of ClanHub.
             </p>
           </div>
 
@@ -691,64 +691,79 @@ export default function Home() {
           </div>
         </div>
 
-        {/* CATEGORY FILTERS */}
-        <div className="mt-9 flex flex-wrap gap-2">
-          {categories.map((category) => (
-            <button
-              key={category.name}
-              type="button"
-              onClick={() => setActiveCategory(category.name)}
-              className={`rounded-xl px-4 py-2.5 text-sm font-medium transition ${
-                activeCategory === category.name
-                  ? "bg-violet-600 text-white shadow-lg shadow-violet-600/15"
-                  : "border border-white/[0.07] bg-[#191920] text-gray-400 hover:border-violet-500/40 hover:text-white"
-              }`}
-            >
-              <span className="mr-2">{category.icon}</span>
-              {category.label}
-            </button>
-          ))}
-        </div>
-
         {/* COMMUNITY GRID */}
-        <div className="mt-7 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredCommunities.map((community) => (
-            <CommunityCard
-              key={community.id}
-              community={community}
-            />
-          ))}
-        </div>
-
-        {filteredCommunities.length === 0 && (
-          <div className="rounded-2xl border border-white/[0.07] bg-[#191920] py-16 text-center">
+        {communitiesLoading ? (
+          <div className="mt-7 rounded-2xl border border-white/[0.07] bg-[#191920] py-16 text-center">
+            <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-violet-500/20 border-t-violet-400" />
+            <p className="mt-4 text-sm text-gray-400">
+              Loading communities...
+            </p>
+          </div>
+        ) : communitiesError ? (
+          <div
+            role="alert"
+            className="mt-7 rounded-2xl border border-red-500/20 bg-red-500/5 py-16 text-center"
+          >
             <p className="text-lg font-semibold">
-              No communities found
+              Unable to load communities
             </p>
             <p className="mt-2 text-sm text-gray-500">
-              Try another search or category.
+              {communitiesError}
             </p>
             <button
               type="button"
-              onClick={() => {
-                setSearch("");
-                setActiveCategory("All");
-              }}
+              onClick={() => window.location.reload()}
               className="mt-5 text-sm font-semibold text-violet-400 hover:text-violet-300"
             >
-              Clear filters
+              Try again
             </button>
           </div>
-        )}
+        ) : filteredCommunities.length > 0 ? (
+          <div className="mt-7 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {filteredCommunities.map((community) => (
+              <CommunityCard
+                key={community.id}
+                community={community}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="mt-7 rounded-2xl border border-white/[0.07] bg-[#191920] py-16 text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-500/10 text-2xl text-violet-300">
+              ◈
+            </div>
 
-        <div className="mt-10 text-center">
-          <a
-            href="#get-started"
-            className="inline-flex items-center gap-2 text-sm font-semibold text-violet-400 transition hover:text-violet-300"
-          >
-            Discover more communities <ArrowIcon />
-          </a>
-        </div>
+            <p className="mt-5 text-lg font-semibold">
+              {communities.length === 0
+                ? "No public communities yet"
+                : "No communities found"}
+            </p>
+
+            <p className="mx-auto mt-2 max-w-md px-4 text-sm leading-6 text-gray-500">
+              {communities.length === 0
+                ? "Be among the first to connect a Discord server and make your community discoverable on ClanHub."
+                : "Try another search term to find a community."}
+            </p>
+
+            {communities.length === 0 ? (
+              <a
+                href={user ? "/communities/connect" : "#get-started"}
+                className="mt-6 inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-3 text-sm font-semibold transition hover:bg-violet-500"
+              >
+                Connect your community
+                <ArrowIcon />
+              </a>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="mt-5 text-sm font-semibold text-violet-400 hover:text-violet-300"
+              >
+                Clear search
+              </button>
+            )}
+          </div>
+        )}
       </section>
 
       {/* VALUE PROPOSITION */}
@@ -773,12 +788,12 @@ export default function Home() {
           <div className="mt-12 grid gap-5 md:grid-cols-3">
             {[
               {
-                icon: "◎",
+                icon: "◉",
                 title: "Discover",
                 text: "Find communities that match your interests and meet people who share your passion.",
               },
               {
-                icon: "◈",
+                icon: "◇",
                 title: "Build",
                 text: "Create your own clan, bring your members together and grow your community.",
               },
