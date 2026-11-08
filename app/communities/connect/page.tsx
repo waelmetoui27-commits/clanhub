@@ -110,29 +110,24 @@ function normalizeGuildName(name: string): string {
 function getGuildSortGroup(name: string): number {
   const normalized = normalizeGuildName(name);
 
-  // Arabic names always appear last.
   if (/\p{Script=Arabic}/u.test(normalized)) {
     return 3;
   }
 
-  // Use the actual first character, not the first letter found later.
   const firstCharacter = Array.from(normalized)[0];
 
   if (!firstCharacter) {
     return 2;
   }
 
-  // English letters first.
   if (/\p{Script=Latin}/u.test(firstCharacter)) {
     return 0;
   }
 
-  // Numeric names second.
   if (/\p{N}/u.test(firstCharacter)) {
     return 1;
   }
 
-  // Symbols and emojis third.
   return 2;
 }
 
@@ -161,9 +156,16 @@ export default function ConnectCommunityPage() {
 
   const [guilds, setGuilds] = useState<DiscordGuild[]>([]);
   const [selectedGuild, setSelectedGuild] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const filteredGuilds = guilds.filter((guild) =>
+    normalizeGuildName(guild.name).includes(
+      normalizeGuildName(searchQuery)
+    )
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -352,62 +354,136 @@ export default function ConnectCommunityPage() {
               </a>
             </div>
           ) : (
-            <div className="mt-7 space-y-3">
-              {guilds.map((guild) => {
-                const selected = selectedGuild === guild.id;
-                const icon = getGuildIcon(guild);
+            <>
+              <div className="mt-7">
+                <label
+                  htmlFor="discord-server-search"
+                  className="mb-2 block text-sm font-medium text-gray-300"
+                >
+                  Find a server
+                </label>
 
-                return (
-                  <button
-                    key={guild.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedGuild(guild.id);
-                      setError(null);
-                    }}
-                    className={`flex w-full items-center gap-4 rounded-2xl border p-4 text-left transition ${
-                      selected
-                        ? "border-violet-500 bg-violet-500/10"
-                        : "border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.05]"
-                    }`}
+                <div className="relative">
+                  <svg
+                    className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
                   >
-                    {icon ? (
-                      <img
-                        src={icon}
-                        alt=""
-                        className="h-12 w-12 rounded-xl object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#292832] text-lg font-bold text-gray-300">
-                        {guild.name.charAt(0).toUpperCase()}
-                      </div>
-                    )}
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="m21 21-4.35-4.35" />
+                  </svg>
 
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-semibold">
-                        {guild.name}
-                      </p>
+                  <input
+                    id="discord-server-search"
+                    type="search"
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    placeholder="Search your 69 Discord servers..."
+                    className="w-full rounded-xl border border-white/10 bg-[#191920] py-3 pl-12 pr-12 text-sm text-white outline-none transition placeholder:text-gray-500 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20"
+                  />
 
-                      <p className="mt-1 text-xs text-gray-500">
-                        {guild.owner
-                          ? "You own this Discord server"
-                          : "You are a member of this Discord server"}
-                      </p>
-                    </div>
-
-                    <div
-                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${
-                        selected
-                          ? "border-violet-500 bg-violet-500 text-white"
-                          : "border-white/20 text-transparent"
-                      }`}
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery("")}
+                      aria-label="Clear search"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-gray-400 transition hover:bg-white/10 hover:text-white"
                     >
-                      ✓
-                    </div>
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                <p className="mt-2 text-xs text-gray-500">
+                  Showing {filteredGuilds.length} of {guilds.length} servers
+                </p>
+              </div>
+
+              {filteredGuilds.length === 0 ? (
+                <div className="py-14 text-center">
+                  <div className="text-4xl">🔎</div>
+
+                  <h3 className="mt-4 text-lg font-semibold">
+                    No servers found
+                  </h3>
+
+                  <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-400">
+                    We couldn't find a Discord server matching "{searchQuery}".
+                    Try another name.
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery("")}
+                    className="mt-5 rounded-xl border border-white/10 px-5 py-2.5 text-sm font-medium text-gray-300 transition hover:border-violet-500/50 hover:text-white"
+                  >
+                    Clear search
                   </button>
-                );
-              })}
-            </div>
+                </div>
+              ) : (
+                <div className="mt-5 space-y-3">
+                  {filteredGuilds.map((guild) => {
+                    const selected = selectedGuild === guild.id;
+                    const icon = getGuildIcon(guild);
+
+                    return (
+                      <button
+                        key={guild.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedGuild(guild.id);
+                          setError(null);
+                        }}
+                        className={`flex w-full items-center gap-4 rounded-2xl border p-4 text-left transition ${
+                          selected
+                            ? "border-violet-500 bg-violet-500/10"
+                            : "border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.05]"
+                        }`}
+                      >
+                        {icon ? (
+                          <img
+                            src={icon}
+                            alt=""
+                            className="h-12 w-12 rounded-xl object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#292832] text-lg font-bold text-gray-300">
+                            {guild.name.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-semibold">
+                            {guild.name}
+                          </p>
+
+                          <p className="mt-1 text-xs text-gray-500">
+                            {guild.owner
+                              ? "You own this Discord server"
+                              : "You are a member of this Discord server"}
+                          </p>
+                        </div>
+
+                        <div
+                          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${
+                            selected
+                              ? "border-violet-500 bg-violet-500 text-white"
+                              : "border-white/20 text-transparent"
+                          }`}
+                        >
+                          ✓
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </>
           )}
 
           {!loading && !error && guilds.length > 0 && (
