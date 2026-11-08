@@ -2,8 +2,11 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 
 export default function CreateClanForm() {
+  const router = useRouter();
+
   const [name, setName] = useState("");
   const [tag, setTag] = useState("");
   const [description, setDescription] = useState("");
@@ -86,12 +89,13 @@ export default function CreateClanForm() {
           </p>
         </div>
 
-        <a
-          href="/"
+        <button
+          type="button"
+          onClick={() => router.push("/clans/dashboard")}
           className="mt-7 inline-flex rounded-xl bg-violet-600 px-6 py-3 font-semibold text-white transition hover:bg-violet-500"
         >
-          Return to ClanHub
-        </a>
+          Open my clan dashboard
+        </button>
       </section>
     );
   }
