@@ -12,9 +12,9 @@ const SESSION_COOKIE = "clanhub_discord_session";
 type DiscordGuild = {
   id: string;
   name: string;
-  icon: string | null;
-  owner: boolean;
-  permissions: string;
+  icon?: string | null;
+  owner?: boolean;
+  permissions?: string;
 };
 
 type DiscordUser = {
@@ -149,7 +149,6 @@ export async function GET(request: Request) {
       .eq("auth_user_id", user.id)
       .maybeSingle();
 
-    // Separate database errors from missing profiles.
     if (profileError) {
       return redirectWithError(
         request,
@@ -164,7 +163,6 @@ export async function GET(request: Request) {
       );
     }
 
-    // Compare the authenticated Discord account IDs.
     if (profile.discord_user_id !== discordUser.id) {
       return redirectWithError(
         request,
@@ -192,35 +190,32 @@ export async function GET(request: Request) {
     const guildsData: DiscordGuild[] =
       await guildsResponse.json();
 
-    const manageableGuilds = guildsData
-      .filter((guild) => {
-        const permissions = Number(guild.permissions);
+    // Keep every guild with a valid ID and name.
+    // Discord's owner and permissions fields are optional.
+    const memberGuilds = Array.isArray(guildsData)
+      ? guildsData
+          .filter(
+            (guild) =>
+              guild &&
+              typeof guild.id === "string" &&
+              typeof guild.name === "string"
+          )
+          .map((guild) => ({
+            id: guild.id,
+            name: guild.name,
+            icon: guild.icon ?? null,
+            owner: guild.owner === true,
+            permissions:
+              typeof guild.permissions === "string"
+                ? guild.permissions
+                : "0",
+          }))
+      : [];
 
-        if (!Number.isSafeInteger(permissions)) {
-          return false;
-        }
-
-        const MANAGE_GUILD = 0x20;
-        const ADMINISTRATOR = 0x8;
-
-        return (
-          guild.owner ||
-          (permissions & MANAGE_GUILD) !== 0 ||
-          (permissions & ADMINISTRATOR) !== 0
-        );
-      })
-      .map((guild) => ({
-        id: guild.id,
-        name: guild.name,
-        icon: guild.icon,
-        owner: guild.owner,
-        permissions: guild.permissions,
-      }));
-
-    if (manageableGuilds.length === 0) {
+    if (memberGuilds.length === 0) {
       return redirectWithError(
         request,
-        "no-manageable-servers"
+        "no-discord-servers"
       );
     }
 
@@ -228,7 +223,7 @@ export async function GET(request: Request) {
       .from("discord_connection_sessions")
       .insert({
         auth_user_id: user.id,
-        guilds: manageableGuilds,
+        guilds: memberGuilds,
         expires_at: new Date(
           Date.now() + 10 * 60 * 1000
         ).toISOString(),

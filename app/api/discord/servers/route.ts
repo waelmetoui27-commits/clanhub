@@ -8,14 +8,14 @@ const SESSION_COOKIE = "clanhub_discord_session";
 type DiscordGuild = {
   id: string;
   name: string;
-  icon: string | null;
-  owner: boolean;
-  permissions: string;
+  icon?: string | null;
+  owner?: boolean;
+  permissions?: string;
 };
 
 export async function GET(request: NextRequest) {
   try {
-    // 1. Verify the ClanHub user.
+    // 1. Verify the logged-in ClanHub user.
     const supabase = await createClient();
 
     const {
@@ -35,7 +35,10 @@ export async function GET(request: NextRequest) {
 
     if (!sessionId) {
       return NextResponse.json(
-        { error: "No Discord connection session found. Please connect Discord again." },
+        {
+          error:
+            "No Discord connection session found. Please connect Discord again.",
+        },
         { status: 401 }
       );
     }
@@ -52,7 +55,10 @@ export async function GET(request: NextRequest) {
 
     if (sessionError || !session) {
       return NextResponse.json(
-        { error: "Discord session not found. Please connect Discord again." },
+        {
+          error:
+            "Discord session not found. Please connect Discord again.",
+        },
         { status: 404 }
       );
     }
@@ -60,7 +66,10 @@ export async function GET(request: NextRequest) {
     // 4. Reject expired sessions.
     if (new Date(session.expires_at).getTime() <= Date.now()) {
       return NextResponse.json(
-        { error: "Your Discord session has expired. Please connect again." },
+        {
+          error:
+            "Your Discord session has expired. Please connect again.",
+        },
         { status: 410 }
       );
     }
@@ -68,12 +77,15 @@ export async function GET(request: NextRequest) {
     // 5. Reject sessions that have already been used.
     if (session.used_at) {
       return NextResponse.json(
-        { error: "This Discord session has already been used." },
+        {
+          error:
+            "This Discord session has already been used.",
+        },
         { status: 409 }
       );
     }
 
-    // 6. Validate the stored server list.
+    // 6. Validate the saved Discord server list.
     if (!Array.isArray(session.guilds)) {
       return NextResponse.json(
         { error: "The Discord server list is invalid." },
@@ -83,27 +95,34 @@ export async function GET(request: NextRequest) {
 
     const guilds = session.guilds as DiscordGuild[];
 
-    const validGuilds = guilds.filter(
-      (guild) =>
-        guild &&
-        typeof guild.id === "string" &&
-        typeof guild.name === "string" &&
-        typeof guild.owner === "boolean" &&
-        typeof guild.permissions === "string"
-    );
-
-    // 7. Return only the information needed by the frontend.
-    return NextResponse.json({
-      success: true,
-      guilds: validGuilds.map((guild) => ({
+    // Keep every server with a valid ID and name.
+    // Owner and permissions are optional display information.
+    const validGuilds = guilds
+      .filter(
+        (guild) =>
+          guild &&
+          typeof guild.id === "string" &&
+          typeof guild.name === "string"
+      )
+      .map((guild) => ({
         id: guild.id,
         name: guild.name,
-        icon: guild.icon,
-        owner: guild.owner,
-        permissions: guild.permissions,
-      })),
+        icon: guild.icon ?? null,
+        owner: guild.owner === true,
+        permissions:
+          typeof guild.permissions === "string"
+            ? guild.permissions
+            : "0",
+      }));
+
+    // 7. Return all valid Discord servers to the frontend.
+    return NextResponse.json({
+      success: true,
+      guilds: validGuilds,
     });
-  } catch {
+  } catch (error) {
+    console.error("Discord servers API error:", error);
+
     return NextResponse.json(
       { error: "Unable to retrieve your Discord servers." },
       { status: 500 }
