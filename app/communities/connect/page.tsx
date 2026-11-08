@@ -88,11 +88,11 @@ export default function ConnectCommunityPage() {
 
       if (!response.ok) {
         throw new Error(
-          data.error || "Unable to connect this community."
+          data.error || "Unable to connect this Discord server."
         );
       }
 
-      router.push("/profile?community=connected");
+      router.push("/clans/dashboard?discord=connected");
       router.refresh();
     } catch (err) {
       setError(
@@ -128,12 +128,13 @@ export default function ConnectCommunityPage() {
           </div>
 
           <h1 className="mt-6 text-3xl font-bold tracking-tight sm:text-4xl">
-            Connect your community
+            Connect a Discord server
           </h1>
 
           <p className="mx-auto mt-4 max-w-xl leading-7 text-gray-400">
-            Choose a Discord server that you own or manage.
-            ClanHub will create a community connected to that server.
+            Choose a Discord server you belong to and connect it to
+            your existing ClanHub clan. You do not need to own the
+            Discord server or have Manage Server permission.
           </p>
         </div>
 
@@ -143,8 +144,9 @@ export default function ConnectCommunityPage() {
               <h2 className="text-lg font-semibold">
                 Your Discord servers
               </h2>
+
               <p className="mt-1 text-sm text-gray-500">
-                Select one server to continue.
+                Select one server to connect to your clan.
               </p>
             </div>
 
@@ -156,6 +158,7 @@ export default function ConnectCommunityPage() {
           {loading ? (
             <div className="py-16 text-center">
               <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-violet-500/20 border-t-violet-500" />
+
               <p className="mt-4 text-sm text-gray-400">
                 Loading your Discord servers...
               </p>
@@ -184,12 +187,13 @@ export default function ConnectCommunityPage() {
               <div className="text-4xl">🏠</div>
 
               <h3 className="mt-4 text-lg font-semibold">
-                No manageable servers found
+                No Discord servers found
               </h3>
 
               <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-gray-400">
-                Make sure you own a Discord server or have Manage Server
-                permission, then try connecting Discord again.
+                We could not find any Discord servers linked to
+                your account. Make sure you belong to at least one
+                Discord server, then connect Discord again.
               </p>
 
               <a
@@ -235,10 +239,11 @@ export default function ConnectCommunityPage() {
                       <p className="truncate font-semibold">
                         {guild.name}
                       </p>
+
                       <p className="mt-1 text-xs text-gray-500">
                         {guild.owner
-                          ? "Server owner"
-                          : "Server manager"}
+                          ? "You own this Discord server"
+                          : "You are a member of this Discord server"}
                       </p>
                     </div>
 
@@ -265,16 +270,29 @@ export default function ConnectCommunityPage() {
               className="mt-7 w-full rounded-xl bg-violet-600 px-6 py-4 font-semibold transition hover:bg-violet-500 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {connecting
-                ? "Connecting community..."
+                ? "Connecting your clan..."
                 : "Connect selected server"}
             </button>
           )}
         </section>
 
-        <p className="mt-6 text-center text-xs leading-6 text-gray-600">
-          Your community will initially be private and pending approval.
-          You can manage it through ClanHub once connected.
-        </p>
+        <div className="mx-auto mt-6 max-w-2xl space-y-2 text-center">
+          <p className="text-xs leading-6 text-gray-500">
+            Only the active Owner of a ClanHub clan can connect its
+            Discord server. Ordinary Discord members are allowed.
+          </p>
+
+          <p className="text-xs leading-6 text-gray-500">
+            ClanHub's Discord bot must already be installed in the
+            selected server. Someone with permission to manage that
+            Discord server may need to install it.
+          </p>
+
+          <p className="text-xs leading-6 text-gray-600">
+            This connects your existing clan. It does not create
+            another ClanHub clan.
+          </p>
+        </div>
       </div>
     </main>
   );

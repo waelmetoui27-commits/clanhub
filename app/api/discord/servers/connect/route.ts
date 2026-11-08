@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
 
     if (authError || !authUser) {
       return NextResponse.json(
-        { error: "You must be logged in to connect a community." },
+        { error: "You must be logged in to connect your clan." },
         { status: 401 }
       );
     }
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 3. Read the temporary Discord connection session.
+    // 3. Read the temporary Discord OAuth session.
     const sessionId = request.cookies.get(
       "clanhub_discord_session"
     )?.value;
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     // 4. Create the server-side admin client.
     const admin = createAdminClient();
 
-    // 5. Verify that ClanHub's bot can access the selected server.
+    // 5. Verify that ClanHub's bot can access this Discord server.
     const botToken = process.env.DISCORD_BOT_TOKEN;
 
     if (!botToken) {
@@ -69,11 +69,14 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    if (discordResponse.status === 403 || discordResponse.status === 404) {
+    if (
+      discordResponse.status === 403 ||
+      discordResponse.status === 404
+    ) {
       return NextResponse.json(
         {
           error:
-            "ClanHub's Discord bot is not installed in this server or does not have access. Invite the bot and try again.",
+            "ClanHub's Discord bot is not installed in this server or does not have access. Ask someone with permission to install the bot, then try again.",
         },
         { status: 403 }
       );
@@ -86,29 +89,53 @@ export async function POST(request: NextRequest) {
       );
 
       return NextResponse.json(
-        { error: "Could not verify the Discord server. Please try again." },
+        {
+          error:
+            "Could not verify the Discord server. Please try again.",
+        },
         { status: 502 }
       );
     }
 
-    // 6. Create the community and all related records atomically.
-    const { data: serverId, error: connectError } = await admin.rpc(
-      "connect_discord_server",
-      {
+    // 6. Connect the selected Discord server to the user's
+    // existing ClanHub clan. The database verifies ownership.
+    const { data: serverId, error: connectError } =
+      await admin.rpc("connect_discord_server", {
         p_session_id: sessionId,
         p_auth_user_id: authUser.id,
         p_guild_id: guildId,
-      }
-    );
+      });
 
     if (connectError) {
-      console.error("Community connection failed:", connectError);
+      console.error(
+        "Clan Discord connection failed:",
+        connectError
+      );
 
       const message = connectError.message || "";
 
-      if (message.includes("already connected")) {
+      if (
+        message.includes(
+          "already connected to a different Discord server"
+        )
+      ) {
         return NextResponse.json(
-          { error: "This Discord server is already connected to ClanHub." },
+          {
+            error:
+              "Your clan is already connected to a different Discord server. Disconnect that server before connecting another one.",
+          },
+          { status: 409 }
+        );
+      }
+
+      if (
+        message.includes("Multiple active owner memberships")
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Your account has multiple active clan owner memberships. Please contact ClanHub support.",
+          },
           { status: 409 }
         );
       }
@@ -127,11 +154,15 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      if (message.includes("not authorized")) {
+      if (
+        message.includes("not authorized") ||
+        message.includes("must be an active ClanHub clan owner") ||
+        message.includes("owner membership not found")
+      ) {
         return NextResponse.json(
           {
             error:
-              "You are not authorized to connect this Discord server.",
+              "You must be the active Owner of a ClanHub clan to connect a Discord server.",
           },
           { status: 403 }
         );
@@ -147,17 +178,26 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      throw new Error("Could not create the community.");
+      throw new Error(
+        "Could not connect the Discord server to your clan."
+      );
     }
 
-    // 7. Clear the temporary session cookie after successful creation.
+    if (!serverId) {
+      throw new Error(
+        "The database did not return a Discord server ID."
+      );
+    }
+
+    // 7. Clear the temporary OAuth session cookie.
     const response = NextResponse.json(
       {
         success: true,
-        message: "Your Discord community has been connected successfully.",
+        message:
+          "Your existing ClanHub clan has been connected to the Discord server successfully.",
         serverId,
       },
-      { status: 201 }
+      { status: 200 }
     );
 
     response.cookies.set("clanhub_discord_session", "", {
@@ -170,10 +210,13 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
-    console.error("Discord server connection error:", error);
+    console.error("Clan Discord connection error:", error);
 
     return NextResponse.json(
-      { error: "An unexpected error occurred while connecting the community." },
+      {
+        error:
+          "An unexpected error occurred while connecting your clan. Please try again.",
+      },
       { status: 500 }
     );
   }
