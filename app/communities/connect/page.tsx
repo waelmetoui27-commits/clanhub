@@ -39,7 +39,15 @@ export default function ConnectCommunityPage() {
         }
 
         if (!cancelled) {
-          setGuilds(data.guilds || []);
+          const sortedGuilds = (data.guilds || []).sort(
+            (a: DiscordGuild, b: DiscordGuild) =>
+              a.name.localeCompare(b.name, undefined, {
+                sensitivity: "base",
+                numeric: true,
+              })
+          );
+
+          setGuilds(sortedGuilds);
           setError(null);
         }
       } catch (err) {
