@@ -12,26 +12,75 @@ type DiscordGuild = {
   permissions: string;
 };
 
-// Convert common decorative Unicode letters and numbers into
-// their standard equivalents for sorting purposes.
+// Normalize decorative Unicode letters and digits for sorting.
 function normalizeGuildName(name: string): string {
   const mathematicalRanges = [
-    { start: 0x1d400, end: 0x1d419, base: 0x41 }, // Bold capitals
-    { start: 0x1d41a, end: 0x1d433, base: 0x61 }, // Bold lowercase
-    { start: 0x1d434, end: 0x1d44d, base: 0x41 }, // Italic capitals
-    { start: 0x1d44e, end: 0x1d467, base: 0x61 }, // Italic lowercase
-    { start: 0x1d468, end: 0x1d481, base: 0x41 }, // Bold italic capitals
-    { start: 0x1d482, end: 0x1d49b, base: 0x61 }, // Bold italic lowercase
-    { start: 0x1d5d4, end: 0x1d5ed, base: 0x41 }, // Sans-serif capitals
-    { start: 0x1d5ee, end: 0x1d607, base: 0x61 }, // Sans-serif lowercase
-    { start: 0x1d608, end: 0x1d621, base: 0x41 }, // Sans-serif italic capitals
-    { start: 0x1d622, end: 0x1d63b, base: 0x61 }, // Sans-serif italic lowercase
-    { start: 0x1d63c, end: 0x1d655, base: 0x41 }, // Sans-serif bold italic capitals
-    { start: 0x1d656, end: 0x1d66f, base: 0x61 }, // Sans-serif bold italic lowercase
-    { start: 0x1d670, end: 0x1d689, base: 0x41 }, // Monospace capitals
-    { start: 0x1d68a, end: 0x1d6a3, base: 0x61 }, // Monospace lowercase
-    { start: 0xff21, end: 0xff3a, base: 0x41 }, // Full-width capitals
-    { start: 0xff41, end: 0xff5a, base: 0x61 }, // Full-width lowercase
+    // Bold
+    [0x1d400, 0x1d419, 0x41],
+    [0x1d41a, 0x1d433, 0x61],
+
+    // Italic
+    [0x1d434, 0x1d44d, 0x41],
+    [0x1d44e, 0x1d467, 0x61],
+
+    // Bold italic
+    [0x1d468, 0x1d481, 0x41],
+    [0x1d482, 0x1d49b, 0x61],
+
+    // Script
+    [0x1d49c, 0x1d4b5, 0x41],
+    [0x1d4b6, 0x1d4cf, 0x61],
+
+    // Bold script
+    [0x1d4d0, 0x1d4e9, 0x41],
+    [0x1d4ea, 0x1d503, 0x61],
+
+    // Fraktur
+    [0x1d504, 0x1d51d, 0x41],
+    [0x1d51e, 0x1d537, 0x61],
+
+    // Double-struck
+    [0x1d538, 0x1d551, 0x41],
+    [0x1d552, 0x1d56b, 0x61],
+
+    // Bold Fraktur
+    [0x1d56c, 0x1d585, 0x41],
+    [0x1d586, 0x1d59f, 0x61],
+
+    // Sans-serif
+    [0x1d5a0, 0x1d5b9, 0x41],
+    [0x1d5ba, 0x1d5d3, 0x61],
+    [0x1d5d4, 0x1d5ed, 0x41],
+    [0x1d5ee, 0x1d607, 0x61],
+
+    // Sans-serif italic
+    [0x1d608, 0x1d621, 0x41],
+    [0x1d622, 0x1d63b, 0x61],
+
+    // Sans-serif bold italic
+    [0x1d63c, 0x1d655, 0x41],
+    [0x1d656, 0x1d66f, 0x61],
+
+    // Monospace
+    [0x1d670, 0x1d689, 0x41],
+    [0x1d68a, 0x1d6a3, 0x61],
+
+    // Full-width
+    [0xff21, 0xff3a, 0x41],
+    [0xff41, 0xff5a, 0x61],
+  ];
+
+  const digitRanges = [
+    // Mathematical bold digits
+    [0x1d7ce, 0x1d7d7],
+    // Double-struck digits
+    [0x1d7d8, 0x1d7e1],
+    // Sans-serif digits
+    [0x1d7e2, 0x1d7eb],
+    // Sans-serif bold digits
+    [0x1d7ec, 0x1d7f5],
+    // Monospace digits
+    [0x1d7f6, 0x1d7ff],
   ];
 
   const converted = Array.from(name)
@@ -40,14 +89,20 @@ function normalizeGuildName(name: string): string {
 
       if (code === undefined) return character;
 
-      for (const range of mathematicalRanges) {
-        if (code >= range.start && code <= range.end) {
-          return String.fromCodePoint(
-            range.base + (code - range.start)
-          );
+      for (const [start, end, base] of mathematicalRanges) {
+        if (code >= start && code <= end) {
+          return String.fromCodePoint(base + (code - start));
         }
       }
 
+      for (const [start, end] of digitRanges) {
+        if (code >= start && code <= end) {
+          return String.fromCodePoint(0x30 + (code - start));
+        }
+      }
+
+      // Mathematical sans-serif bold digits and other styled
+      // characters are also handled by Unicode normalization below.
       return character;
     })
     .join("");
@@ -60,12 +115,15 @@ function normalizeGuildName(name: string): string {
 }
 
 function getGuildSortGroup(name: string): number {
-  // Arabic names always appear in the final group.
-  if (/\p{Script=Arabic}/u.test(name)) {
+  const normalized = normalizeGuildName(name);
+
+  // Arabic names always appear last.
+  if (/\p{Script=Arabic}/u.test(normalized)) {
     return 3;
   }
 
-  const normalized = normalizeGuildName(name);
+  // Ignore decorative symbols and emojis when finding the
+  // first meaningful letter or number.
   const firstMeaningfulCharacter = normalized.match(/[\p{L}\p{N}]/u)?.[0];
 
   if (!firstMeaningfulCharacter) {
@@ -76,11 +134,7 @@ function getGuildSortGroup(name: string): number {
     return 0;
   }
 
-  if (/\p{N}/u.test(firstMeaningfulCharacter)) {
-    return 1;
-  }
-
-  return 2;
+  return 1;
 }
 
 function compareGuilds(a: DiscordGuild, b: DiscordGuild): number {
@@ -100,7 +154,6 @@ function compareGuilds(a: DiscordGuild, b: DiscordGuild): number {
     ignorePunctuation: true,
   }).compare(normalizedA, normalizedB);
 
-  // Keep the original names as a stable tie-breaker.
   return comparison || a.name.localeCompare(b.name);
 }
 
