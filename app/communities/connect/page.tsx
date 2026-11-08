@@ -12,6 +12,98 @@ type DiscordGuild = {
   permissions: string;
 };
 
+// Convert common decorative Unicode letters and numbers into
+// their standard equivalents for sorting purposes.
+function normalizeGuildName(name: string): string {
+  const mathematicalRanges = [
+    { start: 0x1d400, end: 0x1d419, base: 0x41 }, // Bold capitals
+    { start: 0x1d41a, end: 0x1d433, base: 0x61 }, // Bold lowercase
+    { start: 0x1d434, end: 0x1d44d, base: 0x41 }, // Italic capitals
+    { start: 0x1d44e, end: 0x1d467, base: 0x61 }, // Italic lowercase
+    { start: 0x1d468, end: 0x1d481, base: 0x41 }, // Bold italic capitals
+    { start: 0x1d482, end: 0x1d49b, base: 0x61 }, // Bold italic lowercase
+    { start: 0x1d5d4, end: 0x1d5ed, base: 0x41 }, // Sans-serif capitals
+    { start: 0x1d5ee, end: 0x1d607, base: 0x61 }, // Sans-serif lowercase
+    { start: 0x1d608, end: 0x1d621, base: 0x41 }, // Sans-serif italic capitals
+    { start: 0x1d622, end: 0x1d63b, base: 0x61 }, // Sans-serif italic lowercase
+    { start: 0x1d63c, end: 0x1d655, base: 0x41 }, // Sans-serif bold italic capitals
+    { start: 0x1d656, end: 0x1d66f, base: 0x61 }, // Sans-serif bold italic lowercase
+    { start: 0x1d670, end: 0x1d689, base: 0x41 }, // Monospace capitals
+    { start: 0x1d68a, end: 0x1d6a3, base: 0x61 }, // Monospace lowercase
+    { start: 0xff21, end: 0xff3a, base: 0x41 }, // Full-width capitals
+    { start: 0xff41, end: 0xff5a, base: 0x61 }, // Full-width lowercase
+  ];
+
+  const converted = Array.from(name)
+    .map((character) => {
+      const code = character.codePointAt(0);
+
+      if (code === undefined) return character;
+
+      for (const range of mathematicalRanges) {
+        if (code >= range.start && code <= range.end) {
+          return String.fromCodePoint(
+            range.base + (code - range.start)
+          );
+        }
+      }
+
+      return character;
+    })
+    .join("");
+
+  return converted
+    .normalize("NFKD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .trim();
+}
+
+function getGuildSortGroup(name: string): number {
+  // Arabic names always appear in the final group.
+  if (/\p{Script=Arabic}/u.test(name)) {
+    return 3;
+  }
+
+  const normalized = normalizeGuildName(name);
+  const firstMeaningfulCharacter = normalized.match(/[\p{L}\p{N}]/u)?.[0];
+
+  if (!firstMeaningfulCharacter) {
+    return 2;
+  }
+
+  if (/\p{L}/u.test(firstMeaningfulCharacter)) {
+    return 0;
+  }
+
+  if (/\p{N}/u.test(firstMeaningfulCharacter)) {
+    return 1;
+  }
+
+  return 2;
+}
+
+function compareGuilds(a: DiscordGuild, b: DiscordGuild): number {
+  const groupA = getGuildSortGroup(a.name);
+  const groupB = getGuildSortGroup(b.name);
+
+  if (groupA !== groupB) {
+    return groupA - groupB;
+  }
+
+  const normalizedA = normalizeGuildName(a.name);
+  const normalizedB = normalizeGuildName(b.name);
+
+  const comparison = new Intl.Collator("en", {
+    sensitivity: "base",
+    numeric: true,
+    ignorePunctuation: true,
+  }).compare(normalizedA, normalizedB);
+
+  // Keep the original names as a stable tie-breaker.
+  return comparison || a.name.localeCompare(b.name);
+}
+
 export default function ConnectCommunityPage() {
   const router = useRouter();
 
@@ -39,12 +131,8 @@ export default function ConnectCommunityPage() {
         }
 
         if (!cancelled) {
-          const sortedGuilds = (data.guilds || []).sort(
-            (a: DiscordGuild, b: DiscordGuild) =>
-              a.name.localeCompare(b.name, undefined, {
-                sensitivity: "base",
-                numeric: true,
-              })
+          const sortedGuilds = [...(data.guilds || [])].sort(
+            compareGuilds
           );
 
           setGuilds(sortedGuilds);
