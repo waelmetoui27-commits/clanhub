@@ -64,11 +64,7 @@ function DiscordIcon() {
   );
 }
 
-function CommunityCard({
-  community,
-}: {
-  community: Community;
-}) {
+function CommunityCard({ community }: { community: Community }) {
   const initials = community.name
     .split(/\s+/)
     .slice(0, 2)
@@ -105,18 +101,13 @@ function CommunityCard({
       </h3>
 
       <p className="mt-2 min-h-[42px] text-sm leading-6 text-gray-500">
-        {community.description ||
-          "A public Discord community on ClanHub."}
+        {community.description || "A public Discord community on ClanHub."}
       </p>
 
       <div className="mt-5 flex items-center justify-between border-t border-white/[0.07] pt-4">
         <div>
-          <p className="text-sm font-semibold text-gray-200">
-            ClanHub
-          </p>
-          <p className="mt-1 text-xs text-gray-500">
-            Community platform
-          </p>
+          <p className="text-sm font-semibold text-gray-200">ClanHub</p>
+          <p className="mt-1 text-xs text-gray-500">Community platform</p>
         </div>
 
         <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-400">
@@ -179,8 +170,7 @@ export default function Home() {
           throw new Error("Unable to load communities.");
         }
 
-        const data: { communities?: Community[] } =
-          await response.json();
+        const data: { communities?: Community[] } = await response.json();
 
         setCommunities(
           Array.isArray(data.communities) ? data.communities : []
@@ -262,9 +252,7 @@ export default function Home() {
 
     return communities.filter((community) => {
       const name = community.name.toLowerCase();
-      const description = (
-        community.description || ""
-      ).toLowerCase();
+      const description = (community.description || "").toLowerCase();
 
       return name.includes(query) || description.includes(query);
     });
@@ -301,12 +289,20 @@ export default function Home() {
             </a>
 
             {user && (
-              <a
-                href="/profile"
-                className="text-violet-400 transition hover:text-white"
-              >
-                My Profile
-              </a>
+              <>
+                <a
+                  href="/clans/create"
+                  className="font-semibold text-violet-400 transition hover:text-violet-300"
+                >
+                  Create Clan
+                </a>
+                <a
+                  href="/profile"
+                  className="text-violet-400 transition hover:text-white"
+                >
+                  My Profile
+                </a>
+              </>
             )}
           </div>
 
@@ -397,13 +393,22 @@ export default function Home() {
               </a>
 
               {user && (
-                <a
-                  onClick={() => setMobileMenu(false)}
-                  href="/profile"
-                  className="font-semibold text-violet-400 hover:text-white"
-                >
-                  My Profile
-                </a>
+                <>
+                  <a
+                    onClick={() => setMobileMenu(false)}
+                    href="/clans/create"
+                    className="font-semibold text-violet-400 hover:text-white"
+                  >
+                    Create Clan
+                  </a>
+                  <a
+                    onClick={() => setMobileMenu(false)}
+                    href="/profile"
+                    className="font-semibold text-violet-400 hover:text-white"
+                  >
+                    My Profile
+                  </a>
+                </>
               )}
 
               <div className="border-t border-white/10 pt-5">
@@ -487,21 +492,25 @@ export default function Home() {
                 <ArrowIcon />
               </a>
 
-              <button
-                type="button"
-                onClick={user ? handleLogout : handleDiscordLogin}
-                disabled={authLoading}
-                className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-7 py-4 text-sm font-semibold text-gray-200 transition hover:border-violet-400/40 hover:bg-white/[0.06] disabled:opacity-50"
-              >
-                {user ? (
-                  "Log out"
-                ) : (
-                  <>
-                    <DiscordIcon />
-                    Create your clan
-                  </>
-                )}
-              </button>
+              {user ? (
+                <a
+                  href="/clans/create"
+                  className="flex items-center gap-2 rounded-xl border border-violet-400/30 bg-violet-500/10 px-7 py-4 text-sm font-semibold text-violet-200 transition hover:-translate-y-1 hover:border-violet-400/60 hover:bg-violet-500/20"
+                >
+                  Create your clan
+                  <ArrowIcon />
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleDiscordLogin}
+                  disabled={authLoading}
+                  className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-7 py-4 text-sm font-semibold text-gray-200 transition hover:border-violet-400/40 hover:bg-white/[0.06] disabled:opacity-50"
+                >
+                  <DiscordIcon />
+                  {authLoading ? "Connecting..." : "Create your clan"}
+                </button>
+              )}
             </div>
 
             <div className="mt-12 flex items-center gap-4">
@@ -590,7 +599,7 @@ export default function Home() {
                   </p>
                   <p className="mt-2 text-xs leading-6 text-violet-200/70">
                     {featuredCommunity?.description ||
-                      "Connect your Discord server, bring your members together and start building your community on ClanHub."}
+                      "Create your clan, invite your members and build your own place on ClanHub. You can connect a Discord server later."}
                   </p>
                 </div>
               </div>
@@ -741,18 +750,30 @@ export default function Home() {
 
             <p className="mx-auto mt-2 max-w-md px-4 text-sm leading-6 text-gray-500">
               {communities.length === 0
-                ? "Be among the first to connect a Discord server and make your community discoverable on ClanHub."
+                ? "Create your own clan and bring your members together. You can connect a Discord server later."
                 : "Try another search term to find a community."}
             </p>
 
             {communities.length === 0 ? (
-              <a
-                href={user ? "/communities/connect" : "#get-started"}
-                className="mt-6 inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-3 text-sm font-semibold transition hover:bg-violet-500"
-              >
-                Connect your community
-                <ArrowIcon />
-              </a>
+              user ? (
+                <a
+                  href="/clans/create"
+                  className="mt-6 inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-3 text-sm font-semibold transition hover:bg-violet-500"
+                >
+                  Create your clan
+                  <ArrowIcon />
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleDiscordLogin}
+                  disabled={authLoading}
+                  className="mt-6 inline-flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-3 text-sm font-semibold transition hover:bg-violet-500 disabled:opacity-50"
+                >
+                  <DiscordIcon />
+                  {authLoading ? "Connecting..." : "Sign in to create a clan"}
+                </button>
+              )
             ) : (
               <button
                 type="button"
@@ -841,15 +862,26 @@ export default function Home() {
               Build your team, organize competitions and turn every match
               into an opportunity to grow.
             </p>
-            <button
-              type="button"
-              onClick={user ? handleLogout : handleDiscordLogin}
-              disabled={authLoading}
-              className="mt-8 inline-flex items-center gap-3 rounded-xl bg-violet-600 px-7 py-4 text-sm font-semibold transition hover:-translate-y-1 hover:bg-violet-500 disabled:opacity-50"
-            >
-              {user ? "Log out" : "Discover ClanHub"}
-              <ArrowIcon />
-            </button>
+
+            {user ? (
+              <a
+                href="/clans/create"
+                className="mt-8 inline-flex items-center gap-3 rounded-xl bg-violet-600 px-7 py-4 text-sm font-semibold transition hover:-translate-y-1 hover:bg-violet-500"
+              >
+                Create your clan
+                <ArrowIcon />
+              </a>
+            ) : (
+              <button
+                type="button"
+                onClick={handleDiscordLogin}
+                disabled={authLoading}
+                className="mt-8 inline-flex items-center gap-3 rounded-xl bg-violet-600 px-7 py-4 text-sm font-semibold transition hover:-translate-y-1 hover:bg-violet-500 disabled:opacity-50"
+              >
+                {authLoading ? "Connecting..." : "Get started with Discord"}
+                <ArrowIcon />
+              </button>
+            )}
           </div>
         </div>
       </section>
@@ -867,8 +899,8 @@ export default function Home() {
             Find where you belong.
           </h2>
           <p className="mx-auto mt-4 max-w-lg text-sm leading-7 text-gray-500">
-            Your people are out there. Discover your community and start
-            building something together.
+            Your people are out there. Create your clan, bring your members
+            together and start building something on ClanHub.
           </p>
 
           {user ? (
@@ -879,14 +911,25 @@ export default function Home() {
                   {displayName}
                 </span>
               </p>
-              <button
-                type="button"
-                onClick={handleLogout}
-                disabled={authLoading}
-                className="mt-5 rounded-xl border border-white/10 px-6 py-3 text-sm font-semibold text-gray-300 transition hover:border-red-400/40 hover:text-red-300 disabled:opacity-50"
+
+              <a
+                href="/clans/create"
+                className="mt-5 inline-flex items-center gap-2 rounded-xl bg-violet-600 px-7 py-4 text-sm font-semibold transition hover:-translate-y-1 hover:bg-violet-500"
               >
-                {authLoading ? "Please wait..." : "Log out"}
-              </button>
+                Create your clan
+                <ArrowIcon />
+              </a>
+
+              <div>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  disabled={authLoading}
+                  className="mt-5 rounded-xl border border-white/10 px-6 py-3 text-sm font-semibold text-gray-300 transition hover:border-red-400/40 hover:text-red-300 disabled:opacity-50"
+                >
+                  {authLoading ? "Please wait..." : "Log out"}
+                </button>
+              </div>
             </div>
           ) : (
             <button
